@@ -3,10 +3,10 @@
 #include <stdlib.h>
 #include <ftdi.h>
 
-int readCallback(uint8_t *buf, int len, FTDIProgressInfo *progress, void *userdata);
-
 int main()
 {
+	int ret;
+	uint8_t buffer[4096];
 	struct ftdi_context *ftdi = ftdi_new();
 	if (ftdi == NULL)
 		return EXIT_FAILURE;
@@ -16,7 +16,30 @@ int main()
 		ftdi_free(ftdi);
 		return EXIT_FAILURE;
 	}
-	printf("error: %d\n", ftdi_readstream(ftdi, readCallback, NULL, 2, 256));
+	if (ftdi_set_bitmode(ftdi, 0xff, BITMODE_RESET) < 0) {
+		fprintf(stderr, "Can't reset mode\n");
+		return 1;
+	}
+	if (ftdi_set_bitmode(ftdi,  0xff, BITMODE_SYNCFF) < 0) {
+		fprintf(stderr,"Can't set synchronous fifo mode: %s\n",
+		ftdi_get_error_string(ftdi));
+		return 1;
+	}
+	while (1) {
+		ret = ftdi_read_data(ftdi, buffer, 4096);
+		if (ret < 0) {
+			printf("error: %d\n", ret);
+			break;
+		} else {
+			printf("read %d bytes\n", ret);
+			for (int i = 0; i < ret; i++) {
+				printf("%02x ", buffer[i]);
+				if (i % 16 == 15)
+					printf("\n");
+			}
+			printf("\n");
+		}
+	}
 
 	if (ftdi_usb_close(ftdi) < 0) {
 		fprintf(stderr, "Couldn't close device 0403:0604: %s\n",
@@ -25,19 +48,5 @@ int main()
 		return EXIT_FAILURE;
 	}
 	ftdi_free(ftdi);
-	return 0;
-}
-
-int readCallback(uint8_t *buf, int len, FTDIProgressInfo *progress, void *userdata)
-{
-	static int count = 0;
-	count++;
-	printf("%d: Received %d bytes from FTDI:\n", count, len);
-	for (int i = 0; i < len; i++) {
-		printf("%02x ", buf[i]);
-		if (i % 16 == 15)
-			printf("\n");
-	}
-	printf("\n\n");
 	return 0;
 }

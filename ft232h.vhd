@@ -10,9 +10,9 @@ entity ft232h_fifo is
 		-- FT232H interface signals
 		data: inout std_logic_vector(7 downto 0);
 		rx_full_n: in std_logic; -- low when data available to read
-		read_n: out std_logic;
+		read_n: out std_logic; -- low to read from FT232H FIFO
 		tx_empty_n: in std_logic; -- low when space available to write
-		write_n: out std_logic;
+		write_n: out std_logic; -- low to write to FT232H FIFO
 		ft232_clk : in std_logic; -- Fixed at 60 MHz
 		output_en_n: out std_logic; -- low to read from ft232
 		send_immediate_n: out std_logic;
@@ -33,25 +33,22 @@ architecture Behavioral of ft232h_fifo is
 	signal fifo_empty : std_logic := '0';
 	signal fifo_read : std_logic := '0';
 begin
-	buffer_inst: entity work.fifo_buf(Behavioral)
+	async_fifo_inst: entity work.async_fifo(Behavioral)
 		generic map (
-			fifo_width => 8,
-			fifo_depth => 2048
+			data_width => 8,
+			addr_bits => 10 -- 2^10 = 1024 bytes
 		)
 		port map (
-			rd_data => data,
-			rd_clk => ft232_clk,
-			rd_en => fifo_read,
-			almost_empty => open,
-			empty => fifo_empty,
-
-			wr_data => wr_data,
-			wr_clk => wr_clk,
-			wr_en => wr_en,
-			almost_full => open,
-			full => full,
-
-			reset => reset_fifo
+			write_clk => wr_clk, -- in std_logic;
+			write_en => wr_en, -- in std_logic;
+			write_data => wr_data, -- in std_logic_vector(data_width-1 downto 0);
+			write_reset_n => reset_fifo, -- in std_logic;
+			full => full, -- out std_logic;
+			read_clk => ft232_clk, -- in std_logic;
+			read_en => fifo_read, -- in std_logic;
+			read_data => data, -- out std_logic_vector(data_width-1 downto 0);
+			read_reset_n => reset_fifo, -- in std_logic;
+			empty => fifo_empty -- out std_logic
 		);
 	output_en_n <= '1';
 	send_immediate_n <= '1';

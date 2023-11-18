@@ -34,14 +34,14 @@ begin
 		wr_clk => acbus(5), -- in
 		wr_en => wr_en, -- in
 		full => fifo_full, -- out
-		reset_fifo => '0' -- in
+		reset_fifo => '1' -- in
 	);
 
 	process (acbus(5))
 	begin
 		if falling_edge(acbus(5)) then
                         clk_div <= clk_div + 1;
-                        if clk_div = 15000000 then
+                        if clk_div = 300000 then
                                 clk_div <= 0;
 				wr_en <= not fifo_full;
 				counter <= counter + 1;
